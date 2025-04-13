@@ -1,58 +1,53 @@
 import { NextRequest, NextResponse } from "next/server";
-
+import { jwtDecode, JwtPayload } from "jwt-decode";
 import { auth0 } from "@/lib/auth0";
+
+interface CustomJwtPayload extends JwtPayload {
+  permissions?: string[];
+}
 
 export async function middleware(request: NextRequest) {
   const authRes = await auth0.middleware(request);
+  const publicPaths = ["/"];
 
+  // ข้ามการตรวจสอบสำหรับ path พิเศษ เช่น /auth
   if (request.nextUrl.pathname.startsWith("/auth")) {
     return authRes;
   }
 
-  const session = await auth0.getSession(request);
+  // อนุญาตให้เข้าถึง public paths โดยไม่ต้องล็อกอิน
+  if (publicPaths.includes(request.nextUrl.pathname)) {
+    return authRes;
+  }
 
+  // ตรวจสอบ session
+  const session = await auth0.getSession(request);
   if (!session) {
-    // user is not authenticated, redirect to login page
+    console.log("No session found, redirecting to login");
     return NextResponse.redirect(
       new URL("/auth/login", request.nextUrl.origin)
     );
   }
 
-  // the headers from the auth middleware should always be returned
+  // // ถอดรหัส accessToken
+  let accessTokenData: CustomJwtPayload | null = null;
+  try {
+    accessTokenData = jwtDecode<CustomJwtPayload>(session.tokenSet.accessToken);
+  } catch (error) {
+    console.error("Failed to decode accessToken:", error);
+  }
+  console.log("accessTokenData", accessTokenData);
+
+  const permissions = accessTokenData?.permissions || [];
+
+  console.log("permissions:", permissions);
+
   return authRes;
 }
-// import { jwtDecode, JwtPayload } from "jwt-decode";
-// interface CustomJwtPayload extends JwtPayload {
-//   permissions?: string[];
-// }
 
-// export default withMiddlewareAuthRequired(async (req) => {
-//   const res = NextResponse.next();
-
-//   const user = await getSession(req, res);
-
-//   if (!user) {
-//     return NextResponse.redirect("/api/auth/login");
-//   }
-//   const accessTokenData = user.accessToken
-//     ? jwtDecode<CustomJwtPayload>(user.accessToken)
-//     : null;
-
-//   const permissions = accessTokenData?.permissions || [];
-//   console.log("permissions", permissions);
-
-//   return res;
-// });
-
-// export const config = {
-//   matcher: [
-//     /*
-//      * Match all request paths except for the ones starting with:
-//      * - _next/static (static files)
-//      * - _next/image (image optimization files)
-//      * - favicon.ico, sitemap.xml, robots.txt (metadata files)
-//      */
-//     "/profile",
-//     "/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt).*)",
-//   ],
-// };
+export const config = {
+  matcher: [
+    "/profile",
+    "/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|/).*)",
+  ],
+};

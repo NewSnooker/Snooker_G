@@ -2,18 +2,27 @@ import { auth0 } from "@/lib/auth0";
 
 export default async function ProfileServer() {
   const session = await auth0.getSession();
-  const user = session?.user;
 
+  if (!session) {
+    return (
+      <main>
+        <a href="/auth/login?screen_hint=signup">
+          <button>Sign up</button>
+        </a>
+        <a href="/auth/login">
+          <button>Log in</button>
+        </a>
+      </main>
+    );
+  }
   return (
-    user && (
-      <>
-        <div>
-          <img src={user.picture} alt={user.name} />
-          <h2>{user.name}</h2>
-          <p>{user.email}</p>
-        </div>
-        <a href="/api/auth/logout">Logout</a>
-      </>
-    )
+    <main>
+      <h1>Welcome, {session.user.name}!</h1>
+      <p>
+        <a href="/auth/logout">
+          <button>Log out</button>
+        </a>
+      </p>
+    </main>
   );
 }

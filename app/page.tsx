@@ -4,8 +4,10 @@ import GameList from "@/components/frontend/game-list";
 import ProfileSidebar from "@/components/frontend/profile-sidebar";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { auth0 } from "@/lib/auth0";
 
-export default function Home() {
+export default async function Home() {
+  const session = await auth0.getSession();
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
@@ -27,9 +29,19 @@ export default function Home() {
 
           {/* Profile Sidebar - 1/4 width on large screens */}
           <div className="lg:col-span-1">
-            <Link href="/auth/login?returnTo=/profile">
+            {/* <Link href="/auth/login?returnTo=/profile">
               <Button>Login</Button>
-            </Link>
+            </Link> */}
+            {session ? (
+              <Link href="/profile">
+                <Button>Profile</Button>
+              </Link>
+            ) : (
+              <Link href="/auth/login">
+                <Button>Login</Button>
+              </Link>
+            )}
+
             {/* <ProfileSidebar name="ภานุวัฒน์" coins={1200} /> */}
           </div>
         </div>
